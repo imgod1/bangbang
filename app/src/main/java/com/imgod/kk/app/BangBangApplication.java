@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 
 import com.imgod.kk.utils.LogUtils;
+import com.tencent.bugly.Bugly;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.cookie.CookieJarImpl;
 import com.zhy.http.okhttp.cookie.store.PersistentCookieStore;
@@ -40,8 +41,11 @@ public class BangBangApplication extends Application {
         super.onCreate();
         context = this;
         initOkHttp();
+        initBugly();
     }
-
+    private void initBugly() {
+        Bugly.init(getApplicationContext(), "057f96dda9", false);
+    }
     private void initOkHttp() {
         CookieJarImpl cookieJar = new CookieJarImpl(new PersistentCookieStore(getApplicationContext())) {
             private final HashMap<HttpUrl, List<Cookie>> cookieStore = new HashMap<>();
@@ -49,7 +53,7 @@ public class BangBangApplication extends Application {
             @Override
             public synchronized void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
                 cookieStore.put(url, cookies);
-                cookieStore.put(HttpUrl.parse("www.mf178.cn"), cookies);
+                cookieStore.put(HttpUrl.parse("1hengchang.com"), cookies);
                 for (Cookie cookie : cookies) {
                     LogUtils.e(TAG, "save cookie Name:" + cookie.name());
                     LogUtils.e(TAG, "save cookie Value:" + cookie.value());
