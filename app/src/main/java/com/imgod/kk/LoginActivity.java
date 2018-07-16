@@ -1,5 +1,7 @@
 package com.imgod.kk;
 
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -8,12 +10,14 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.imgod.kk.utils.DateUtils;
 import com.imgod.kk.utils.LogUtils;
+import com.imgod.kk.utils.SPUtils;
 import com.imgod.kk.utils.ToastUtils;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.BitmapCallback;
@@ -29,7 +33,13 @@ public class LoginActivity extends BaseActivity {
     private EditText etv_pwd;
     private EditText etv_img_code;
     private ImageView iv_code;
+    private CheckBox cbox_auto_login;
     private View mLoginFormView;
+
+    public static void actionStart(Context context) {
+        Intent intent = new Intent(context, LoginActivity.class);
+        context.startActivity(intent);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +50,7 @@ public class LoginActivity extends BaseActivity {
         etv_pwd = (EditText) findViewById(R.id.etv_pwd);
         etv_img_code = findViewById(R.id.etv_img_code);
         iv_code = findViewById(R.id.iv_code);
+        cbox_auto_login = findViewById(R.id.cbox_auto_login);
         etv_pwd.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -70,6 +81,18 @@ public class LoginActivity extends BaseActivity {
         mLoginFormView = findViewById(R.id.login_form);
 //        requestIndexHomePage(REFRESH_TYPE_GET_COOKIE);
         requestLoadImageCode();
+        initEvent();
+    }
+
+    private void initEvent() {
+        String phone = SPUtils.getInstance().getString(SP_PHONE);
+        String password = SPUtils.getInstance().getString(SP_PASSWORD);
+        //判断是否设置了自动登录 保存标志位
+        if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)) {
+            //请求登录的逻辑
+            etv_phone.setText(phone);
+            etv_pwd.setText(password);
+        }
     }
 
 
@@ -112,7 +135,13 @@ public class LoginActivity extends BaseActivity {
             etv_img_code.requestFocus();
             return;
         }
-
+        //判断是否设置了自动登录 保存标志位
+        if (cbox_auto_login.isChecked()) {
+            SPUtils.getInstance().put(SP_PHONE, phone);
+            SPUtils.getInstance().put(SP_PASSWORD, password);
+        } else {//不自动登录的话 那就清空之前的存储信息
+            SPUtils.getInstance().clear();
+        }
         //请求登录的逻辑
         requestLogin(phone, password, imgCode);
     }
@@ -233,5 +262,13 @@ public class LoginActivity extends BaseActivity {
         }
     }
 
+    public static final String SP_PHONE = "phone";
+    public static final String SP_PASSWORD = "password";
+
+    //清空登录数据
+    public static void clearLoginData() {
+        SPUtils.getInstance().put(SP_PHONE, "");
+        SPUtils.getInstance().put(SP_PASSWORD, "");
+    }
 }
 

@@ -1,6 +1,7 @@
-package com.imgod.kk;
+package com.imgod.kk.app;
 
 import android.app.Application;
+import android.content.Context;
 
 import com.imgod.kk.utils.LogUtils;
 import com.zhy.http.okhttp.OkHttpUtils;
@@ -22,7 +23,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * MiFengApplication.java是液总汇的类。
+ * BangBangApplication.java是液总汇的类。
  *
  * @author imgod1
  * @version 2.0.0 2018/5/28 10:31
@@ -31,12 +32,13 @@ import okhttp3.Response;
  * @include {@link }
  * @used {@link }
  */
-public class MiFengApplication extends Application {
-    private static final String TAG = "MiFengApplication";
-
+public class BangBangApplication extends Application {
+    private static final String TAG = "BangBangApplication";
+    public static Context context;
     @Override
     public void onCreate() {
         super.onCreate();
+        context = this;
         initOkHttp();
     }
 

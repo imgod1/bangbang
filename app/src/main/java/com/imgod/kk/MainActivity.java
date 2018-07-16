@@ -1,20 +1,43 @@
 package com.imgod.kk;
 
+import android.Manifest;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import android.support.annotation.NonNull;
+import android.support.design.widget.BottomSheetDialog;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.imgod.kk.app.Constants;
+import com.imgod.kk.response_model.BaseResponse;
+import com.imgod.kk.response_model.GetTaskResponse;
+import com.imgod.kk.utils.DateUtils;
+import com.imgod.kk.utils.GsonUtil;
 import com.imgod.kk.utils.LogUtils;
 import com.imgod.kk.utils.MediaPlayUtils;
+import com.imgod.kk.utils.SPUtils;
+import com.imgod.kk.utils.ScreenUtils;
 import com.imgod.kk.utils.ToastUtils;
+import com.imgod.kk.views.RowView;
+import com.zhy.adapter.recyclerview.CommonAdapter;
+import com.zhy.adapter.recyclerview.MultiItemTypeAdapter;
+import com.zhy.adapter.recyclerview.base.ViewHolder;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.StringCallback;
 import com.zhy.http.okhttp.request.RequestCall;
@@ -24,16 +47,29 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.util.Arrays;
+import java.util.List;
+
 import okhttp3.Call;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity implements View.OnClickListener {
     private static final String TAG = "MainActivity";
     public static final int RUSH_MODEL_NOT_RUSH = 0;//不抢购
     public static final int RUSH_MODEL_RUSH = 1;//抢购
     private int rush_model = RUSH_MODEL_NOT_RUSH;
 
+
+    public static final int TYPE_NORMAL = 0x00;//正常登陆
+    public static final int TYPE_RELOGIN = 0x01;//进来跳转到登陆页
+    private int come_type;
+
     public static void actionStart(Context context) {
+        actionStart(context, TYPE_NORMAL);
+    }
+
+    public static void actionStart(Context context, int come_type) {
         Intent intent = new Intent(context, MainActivity.class);
+        intent.putExtra("come_type", come_type);
         context.startActivity(intent);
     }
 
@@ -42,49 +78,58 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initViews();
-
+        initEvent();
     }
 
-    private TextView tv_hint;
-    private TextView tv_result;
+    private void initEvent() {
+        rview_province.setOnClickListener(this);
+        rview_amount.setOnClickListener(this);
+        tv_action_1.setOnClickListener(this);
+        tv_action_2.setOnClickListener(this);
+        tv_get_mobile_number.setOnClickListener(this);
+    }
+
     Toolbar toolbar;
-    Button btn_action;
+    private RowView rview_province;
+    private RowView rview_amount;
+
+    private View item_order;
+    private TextView tv_phone_number;
+    private TextView tv_province;
+    private TextView tv_amount;
+    private TextView tv_id;
+    private TextView tv_date;
+    private TextView tv_action_1;
+    private TextView tv_action_2;
+    private ProgressBar progress_bar;
+
+    private TextView tv_get_mobile_number;
 
     private void initViews() {
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        tv_hint = findViewById(R.id.tv_hint);
-        tv_result = findViewById(R.id.tv_result);
+        rview_province = findViewById(R.id.rview_province);
+        rview_amount = findViewById(R.id.rview_amount);
+        toolbar.setTitle(R.string.app_name);
 
-        btn_action = findViewById(R.id.btn_action);
-        btn_action.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String title = btn_action.getText().toString();
-                if (title.equals("开始")) {
-                    btn_action.setText("停止");
-                    rush_model = RUSH_MODEL_RUSH;
-                    requestPlatformOrderSize();
-                } else {
-                    btn_action.setText("开始");
-                    rush_model = RUSH_MODEL_NOT_RUSH;
-                    requestPlatformOrderSizeCall.cancel();
-                }
+        item_order = findViewById(R.id.item_order);
+        tv_phone_number = findViewById(R.id.tv_phone_number);
+        tv_province = findViewById(R.id.tv_province);
+        tv_amount = findViewById(R.id.tv_amount);
+        tv_id = findViewById(R.id.tv_id);
+        tv_date = findViewById(R.id.tv_date);
+        tv_action_1 = findViewById(R.id.tv_action_1);
+        tv_action_2 = findViewById(R.id.tv_action_2);
 
-            }
-        });
-        selectId = R.id.action_30;
-        selectTechphoneChargeAmount = getString(R.string.action_30);
-        setToolBarTitle();
-    }
-
-    private void setToolBarTitle() {
-        toolbar.setTitle("蜜蜂抢单: " + selectTechphoneChargeAmount);
+        progress_bar = findViewById(R.id.progress_bar);
+        tv_get_mobile_number = findViewById(R.id.tv_get_mobile_number);
+        rview_province.setTitle("省份");
+        rview_amount.setTitle("面额");
+        setRowViewContent();
     }
 
 
-    private long loopTimes = 0;
     //获取平台上现在的订单量
     public static final String ORDER_LIST_URL = "http://bang.1hengchang.com/bang-front/topuporder/listpage?applCode=mobilefee";
 
@@ -93,11 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestPlatformOrderSize() {
         if (rush_model == RUSH_MODEL_RUSH) {
-            loopTimes++;
-            tv_hint.setText("正在为你进行第" + loopTimes + "次尝试");
-            tv_result.setVisibility(View.GONE);
-
-            btn_action.postDelayed(new Runnable() {
+            toolbar.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     requestPlatformOrderSizeCall = OkHttpUtils.get().url(ORDER_LIST_URL).build();
@@ -111,12 +152,7 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onResponse(String response, int id) {//
-                            if (response.contains("平台暂未订单，请稍后再试")) {
-                                ToastUtils.showToastShort(MainActivity.this, "平台暂未订单，请稍后再试");
-                                requestPlatformOrderSize();
-                            } else {
-                                parseOrderSizeResponse(response);
-                            }
+                            parseOrderSizeResponse(response);
                         }
                     });
                 }
@@ -137,15 +173,17 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < liElements.size(); i++) {
                 Element tempElement = liElements.get(i);
                 String techphoneChargeName = tempElement.attr("data-parval");
-                int orderNum = getTelephoneChargeOrderNum(tempElement.text());
-                if (techphoneChargeName.equals(selectTechphoneChargeAmount)) {
+                LogUtils.e(TAG, "parseOrderSizeResponse:techphoneChargeName: " + techphoneChargeName);
+                LogUtils.e(TAG, "parseOrderSizeResponse: mRequestAmount:" + mRequestAmount);
+                if (techphoneChargeName.trim().equals("" + mRequestAmount)) {
+                    int orderNum = getTelephoneChargeOrderNum(tempElement.text());
                     LogUtils.e(TAG, techphoneChargeName);
                     LogUtils.e(TAG, "数量:" + orderNum);
 
                     if (orderNum > 0) {
                         //如果该选项还有剩余订单的话,那这个时候应该先发起抢订单的操作
                         LogUtils.e(TAG, techphoneChargeName + "话费单有库存,请及时去抢单");
-                        requestGetTaskWarn(techphoneChargeName.replace("元", ""), "1");
+                        requestGetTask("" + mRequestAmount, mRequestProvince, "1");
                     } else {
                         //如果没有数量 那就应该执行刷新操作了
                         requestPlatformOrderSize();
@@ -160,46 +198,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private RequestCall requestGetTaskWarnCall;
-    //请求获取任务之前的确认弹窗
-    private static final String GET_TASK_WARN_URL = "http://www.mf178.cn/customer/order/ajax";
-
-    private void requestGetTaskWarn(final String amount, final String count) {
-        requestGetTaskWarnCall = OkHttpUtils.get().url(GET_TASK_WARN_URL)
-                .addParams("action", "get_tasks")
-                .addParams("amount", amount)
-                .build();
-        requestGetTaskWarnCall.execute(new StringCallback() {
-            @Override
-            public void onError(Call call, Exception e, int id) {
-                if (!call.isCanceled()) {
-                    requestGetTaskWarn(amount, count);
-                }
-            }
-
-            @Override
-            public void onResponse(String response, int id) {
-                requestGetTask(amount, count);
-            }
-        });
-    }
-
-
+    private String mRequestProvince = Constants.PROVINCE_ALL;
+    private int mRequestAmount = 50;
     private RequestCall requestGetTaskCall;
     //真正请求获取任务
-    private static final String GET_TASK_URL = "http://www.mf178.cn/customer/order/get_tasks?contract%5B%5D=1&contract%5B%5D=2&contract%5B%5D=4&contract%5B%5D=8&contract%5B%5D=16&contract%5B%5D=32&contract%5B%5D=256&contract%5B%5D=64&contract%5B%5D=128&SEQ=1530858401";
 
-    private void requestGetTask(String amount, String count) {
-        requestGetTaskCall = OkHttpUtils.get().url(GET_TASK_URL)
-                .addParams("amount", amount)
+    private void requestGetTask(String amount, String province, String count) {
+        requestGetTaskCall = OkHttpUtils.post().url(API.GET_TASK_URL)
+                .addParams("parval", amount)
+                .addParams("appCode", "mobilefee")
+                .addParams("province", province)
                 .addParams("count", count)
                 .build();
         requestGetTaskCall.execute(new StringCallback() {
             @Override
             public void onError(Call call, Exception e, int id) {
-                if (!call.isCanceled()) {
-                    requestPlatformOrderSize();
-                }
+                requestPlatformOrderSize();
             }
 
             @Override
@@ -210,37 +224,91 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    GetTaskResponse.DataBean orderDataBean;//获取到的订单信息
 
     private void parseGetTaskResponse(String response) {
-        if (response.contains("成功获取1条订单,请在指定时间内完成订单")) {//成功获取到号码
-            Document document = Jsoup.parse(response);
-            Elements elements = document.getElementsByClass("btn btn-xs btn-info copy_btn");
-            if (elements.size() > 0) {
-                Element resultElement = elements.get(0);
-                LogUtils.e(TAG, "resultElement:" + resultElement.text());
-                tv_result.setText("获取到的手机号码为:" + resultElement.text());
-                tv_result.setVisibility(View.VISIBLE);
+        BaseResponse baseResponse = GsonUtil.GsonToBean(response, BaseResponse.class);
+        if (baseResponse.getStatus().equals(Constants.REQUEST_STATUS.SUCCESS)) {
+            GetTaskResponse getTaskResponse = GsonUtil.GsonToBean(response, GetTaskResponse.class);
+            List<GetTaskResponse.DataBean> orderList = getTaskResponse.getData();
+            if (null != orderList && orderList.size() > 0) {
+                orderDataBean = orderList.get(0);
 
-                MediaPlayUtils.playSound(MainActivity.this, "memeda.wav");
+                rush_model = RUSH_MODEL_NOT_RUSH;
+                setBottomViewStatus();
+                item_order.setVisibility(View.VISIBLE);
+
+
+                tv_phone_number.setText(orderDataBean.getMobile());
+                tv_province.setText(orderDataBean.getProvinceName());
+                tv_amount.setText("" + orderDataBean.getParval());
+                tv_id.setText("订单号:" + orderDataBean.getId());
+                if (!TextUtils.isEmpty(orderDataBean.getExpireTime())) {
+                    tv_date.setText(DateUtils.reFormat(orderDataBean.getExpireTime(), DateUtils.FORMAT_DATE_TIME_ALL_NUMBER, DateUtils.FORMAT_DATE_TIME));
+                }
+                tv_action_1.setText("我已充值");
+                tv_action_2.setText("我没充值");
+                tv_action_1.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        ToastUtils.showToastShort(mContext, "选择凭证");
+                        choosePhotoWithPermissionCheck();
+                    }
+                });
+
+                tv_action_2.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        requestReportTaskFailed(orderDataBean.getId());
+                    }
+                });
+                showGetOrderSuccessDialog();
+            }
+
+        } else {
+            if (baseResponse.getMsg().contains("下单太频繁,休息会儿再来")) {
+                ToastUtils.showToastShort(mContext, baseResponse.getMsg());
             } else {
                 requestPlatformOrderSize();
             }
-        } else {
-            requestPlatformOrderSize();
+        }
+    }
+
+    private AlertDialog getOrderSuccessDialog;
+
+    private void showGetOrderSuccessDialog() {
+        if (null == getOrderSuccessDialog) {
+            getOrderSuccessDialog = new AlertDialog.Builder(mContext)
+                    .setTitle("提示")
+                    .setMessage("成功获取到一条订单,请及时充值")
+                    .setCancelable(false)
+                    .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            getOrderSuccessDialog.dismiss();
+                        }
+                    })
+                    .create();
+
+            getOrderSuccessDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialogInterface) {
+                    MediaPlayUtils.stopPlay();
+                }
+            });
+        }
+
+        if (!getOrderSuccessDialog.isShowing()) {
+            getOrderSuccessDialog.show();
+            if (SPUtils.getInstance().getBoolean(SettingActivity.SP_MUSIC, true)) {
+                MediaPlayUtils.playSound(mContext, "memeda.wav");
+            }
         }
     }
 
 
-    private String getTelephoneChargeName(String text) {
-        if (!TextUtils.isEmpty(text)) {
-            int startPosition = 0;
-            int endPosition = text.indexOf("元") + 1;
-            return text.substring(startPosition, endPosition);
-        }
-
-        return null;
-    }
-
+    //获取话费单还剩多少
     private int getTelephoneChargeOrderNum(String text) {
         LogUtils.e(TAG, "getTelephoneChargeOrderNum: text:" + text);
         if (!TextUtils.isEmpty(text)) {
@@ -265,42 +333,279 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private int selectId;
-    private String selectTechphoneChargeAmount;
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == selectId) {
-            return super.onOptionsItemSelected(item);
-        }
-        selectId = id;
-        if (null != requestPlatformOrderSizeCall) {
-            requestPlatformOrderSizeCall.cancel();
-        }
-        //noinspection SimplifiableIfStatement
-        switch (id) {
-            case R.id.action_30:
-                selectTechphoneChargeAmount = getString(R.string.action_30);
-                break;
-            case R.id.action_50:
-                selectTechphoneChargeAmount = getString(R.string.action_50);
-                break;
-            case R.id.action_100:
-                selectTechphoneChargeAmount = getString(R.string.action_100);
-                break;
-            case R.id.action_200:
-                selectTechphoneChargeAmount = getString(R.string.action_200);
-                break;
-            case R.id.action_300:
-                selectTechphoneChargeAmount = getString(R.string.action_300);
-                break;
-            case R.id.action_500:
-                selectTechphoneChargeAmount = getString(R.string.action_500);
-                break;
-        }
-        setToolBarTitle();
-        loopTimes = 0;
         return super.onOptionsItemSelected(item);
+    }
+
+
+    private RequestCall requestReportCall;
+
+    //上报充值结果 我没充
+    public void requestReportTaskFailed(String id) {
+        requestReportCall = OkHttpUtils.post().url(API.REPORT_FAILED_API)
+                .addParams("orderSeq", id)
+                .build();
+        requestReportCall.execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                ToastUtils.showToastShort(mContext, e.getMessage());
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                BaseResponse baseResponse = GsonUtil.GsonToBean(response, BaseResponse.class);
+                if (Constants.REQUEST_STATUS.SUCCESS.equals(baseResponse.getStatus())) {
+                    item_order.setVisibility(View.GONE);
+                    ToastUtils.showToastShort(mContext, "订单取消成功");
+                } else {
+                    ToastUtils.showToastShort(mContext, baseResponse.getMsg());
+                }
+            }
+        });
+    }
+
+
+    private void choosePhotoWithPermissionCheck() {
+        //第二个参数是需要申请的权限
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            //权限还没有授予，需要在这里写申请权限的代码
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    REQUEST_PERMISSION_CODE_WRITE_STORAGE);
+        } else {
+            //权限已经被授予，在这里直接写要执行的相应方法即可
+            choosePhoto();
+        }
+    }
+
+    private static final int REQUEST_PERMISSION_CODE_WRITE_STORAGE = 0x01;
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_PERMISSION_CODE_WRITE_STORAGE) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                choosePhoto();
+            } else {
+                // Permission Denied
+                ToastUtils.showToastShort(mContext, "选择照片的权限被拒绝.无法选择");
+            }
+        }
+    }
+
+    private void choosePhoto() {
+        /**
+         * 打开选择图片的界面
+         */
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");//相片类型
+        startActivityForResult(intent, REQUEST_CODE_PICK_IMAGE);
+    }
+
+    private static final int REQUEST_CODE_PICK_IMAGE = 0x00;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_PICK_IMAGE) {
+            if (resultCode == RESULT_OK) {
+                Uri uri = data.getData();
+                LogUtils.e(TAG, "onActivityResult: " + uri.getEncodedPath());
+                try {
+//                    Bitmap bit = BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));
+//                    String voucher = BitmapUtils.bitmapToBase64WithTitle(bit, 40);
+//                    LogUtils.e(TAG, "onActivityResult: " + voucher);
+//                    requestReportTask(orderDataBean.getId(), orderDataBean.getMobile(), Constants.RECHARGE_TYPE.SUCCESS, voucher);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    ToastUtils.showToastShort(mContext, "图片不存在");
+                }
+            } else {
+                ToastUtils.showToastShort(mContext, "取消选择图片");
+            }
+        }
+    }
+
+
+    private BottomSheetDialog amountDialog;
+    private View amountDialogView;
+    private TextView tv_10;
+    private TextView tv_20;
+    private TextView tv_30;
+    private TextView tv_50;
+    private TextView tv_100;
+    private TextView tv_200;
+    private TextView tv_300;
+    private TextView tv_500;
+
+    //选择话费面额的对话框
+    private void showSelectAmountDialog() {
+        if (null == amountDialog) {
+            amountDialog = new BottomSheetDialog(mContext);
+            amountDialogView = LayoutInflater.from(mContext).inflate(R.layout.dialog_amount, null, false);
+            tv_10 = amountDialogView.findViewById(R.id.tv_10);
+            tv_20 = amountDialogView.findViewById(R.id.tv_20);
+            tv_30 = amountDialogView.findViewById(R.id.tv_30);
+            tv_50 = amountDialogView.findViewById(R.id.tv_50);
+            tv_100 = amountDialogView.findViewById(R.id.tv_100);
+            tv_200 = amountDialogView.findViewById(R.id.tv_200);
+            tv_300 = amountDialogView.findViewById(R.id.tv_300);
+            tv_500 = amountDialogView.findViewById(R.id.tv_500);
+
+
+            View.OnClickListener onClickListener = new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String tag = (String) v.getTag();
+                    if (!TextUtils.isEmpty(tag)) {
+                        mRequestAmount = Integer.parseInt(tag);
+                        amountDialog.dismiss();
+                        setRowViewContent();
+                    }
+                }
+            };
+
+            tv_10.setOnClickListener(onClickListener);
+            tv_20.setOnClickListener(onClickListener);
+            tv_30.setOnClickListener(onClickListener);
+            tv_50.setOnClickListener(onClickListener);
+            tv_100.setOnClickListener(onClickListener);
+            tv_200.setOnClickListener(onClickListener);
+            tv_300.setOnClickListener(onClickListener);
+            tv_500.setOnClickListener(onClickListener);
+
+            amountDialog.setContentView(amountDialogView);
+        }
+        if (null != amountDialog && !amountDialog.isShowing()) {
+            amountDialog.show();
+        }
+    }
+
+
+    private BottomSheetDialog provinceDialog;
+    private View provinceDialogView;
+    private RecyclerView dialog_recylerview;
+
+    //选择省份的对话框
+    private void showSelectProvinceDialog() {
+        if (null == provinceDialog) {
+            provinceDialog = new BottomSheetDialog(mContext);
+            provinceDialogView = LayoutInflater.from(mContext).inflate(R.layout.dialog_list, null, false);
+            dialog_recylerview = provinceDialogView.findViewById(R.id.dialog_recylerview);
+            dialog_recylerview.setLayoutManager(new LinearLayoutManager(mContext));
+            CommonAdapter<String> commonAdapter = new CommonAdapter<String>(mContext, R.layout.item_province, Arrays.asList(Constants.PROVINCE_ARRAY)) {
+                @Override
+                protected void convert(ViewHolder holder, String s, int position) {
+                    holder.setText(R.id.tv_title, s);
+                }
+            };
+            commonAdapter.setOnItemClickListener(new MultiItemTypeAdapter.OnItemClickListener() {
+                @Override
+                public void onItemClick(View view, RecyclerView.ViewHolder holder, int position) {
+                    String result = Constants.PROVINCE_ARRAY[position];
+                    if (result.equals("不限")) {
+                        mRequestProvince = Constants.PROVINCE_ALL;
+                    } else {
+                        mRequestProvince = result;
+                    }
+                    provinceDialog.dismiss();
+                    setRowViewContent();
+                }
+
+                @Override
+                public boolean onItemLongClick(View view, RecyclerView.ViewHolder holder, int position) {
+                    return false;
+                }
+            });
+            dialog_recylerview.setAdapter(commonAdapter);
+
+            provinceDialog.setContentView(provinceDialogView);
+
+            //设置对话框的高度
+            View parent = (View) provinceDialogView.getParent();
+            CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) parent.getLayoutParams();
+            params.height = ScreenUtils.getScreenHeight(mContext) / 2;
+            parent.setLayoutParams(params);
+
+        }
+        if (null != provinceDialog && !provinceDialog.isShowing()) {
+            provinceDialog.show();
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.rview_province:
+                showSelectProvinceDialog();
+                break;
+            case R.id.rview_amount:
+                showSelectAmountDialog();
+                break;
+            case R.id.tv_action_1:
+                break;
+            case R.id.tv_action_2:
+                break;
+            case R.id.tv_get_mobile_number:
+                if (rush_model == RUSH_MODEL_RUSH) {
+                    rush_model = RUSH_MODEL_NOT_RUSH;
+                } else {
+                    rush_model = RUSH_MODEL_RUSH;
+                }
+                setBottomViewStatus();
+                requestPlatformOrderSize();
+                break;
+        }
+    }
+
+    private void setBottomViewStatus() {
+        if (rush_model == RUSH_MODEL_RUSH) {
+            tv_get_mobile_number.setText("正在获取号码...");
+            progress_bar.setVisibility(View.VISIBLE);
+        } else {
+            tv_get_mobile_number.setText("获取号码");
+            progress_bar.setVisibility(View.GONE);
+        }
+    }
+
+
+    private void setRowViewContent() {
+        if (mRequestProvince.equals(Constants.PROVINCE_ALL)) {
+            rview_province.setContent("不限");
+        } else {
+            rview_province.setContent(mRequestProvince);
+        }
+        rview_amount.setContent("" + mRequestAmount);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        int come_type = intent.getIntExtra("come_type", TYPE_NORMAL);
+        if (come_type == TYPE_RELOGIN) {
+            LoginActivity.actionStart(mContext);
+            finish();
+        }
+    }
+
+
+    @Override
+    public void onBackPressed() {
+        exit();
+    }
+
+    private long exitTime;
+
+    public void exit() {
+        if ((System.currentTimeMillis() - exitTime) > 2000) {
+            ToastUtils.showToastShort(mContext, "再按一次退出程序");
+            exitTime = System.currentTimeMillis();
+        } else {
+            finish();
+        }
     }
 }

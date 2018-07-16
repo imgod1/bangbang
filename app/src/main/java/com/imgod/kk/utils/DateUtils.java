@@ -1,6 +1,7 @@
 package com.imgod.kk.utils;
 
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -29,5 +30,19 @@ public class DateUtils {
         DateFormat df = new SimpleDateFormat(FORMAT_DATE_TIME_ALL_NUMBER);
         String dateStr = df.format(date);
         return dateStr;
+    }
+
+    public static String reFormat(String date, String f1, String f2) {
+        SimpleDateFormat df1 = new SimpleDateFormat(f1);
+        SimpleDateFormat df2 = new SimpleDateFormat(f2);
+        Date d1 = new Date();
+        try {
+            d1 = df1.parse(date);
+        } catch (ParseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        return df2.format(d1);
     }
 }
