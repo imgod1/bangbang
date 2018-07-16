@@ -1,38 +1,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.imgod.kk.MainActivity">
+      xmlns:app="http://schemas.android.com/apk/res-auto"
+      xmlns:tools="http://schemas.android.com/tools"
+      tools:context="com.imgod.kk.MainActivity">
     <item
-        android:id="@+id/action_30"
+        android:id="@+id/action_setting"
+        android:icon="@drawable/ic_setting"
         android:orderInCategory="100"
-        android:title="@string/action_30"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_50"
-        android:orderInCategory="100"
-        android:title="@string/action_50"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_100"
-        android:orderInCategory="100"
-        android:title="@string/action_100"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_200"
-        android:orderInCategory="100"
-        android:title="@string/action_200"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_300"
-        android:orderInCategory="100"
-        android:title="@string/action_300"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_500"
-        android:orderInCategory="100"
-        android:title="@string/action_500"
-        app:showAsAction="never" />
+        android:title="设置"
+        app:showAsAction="always"/>
 </menu>

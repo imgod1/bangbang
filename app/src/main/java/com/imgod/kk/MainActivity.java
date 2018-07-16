@@ -336,6 +336,11 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_setting:
+                SettingActivity.actionStart(mContext);
+                break;
+        }
         return super.onOptionsItemSelected(item);
     }
 

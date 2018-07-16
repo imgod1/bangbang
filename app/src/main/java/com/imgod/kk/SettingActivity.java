@@ -65,7 +65,6 @@ public class SettingActivity extends BaseActivity implements View.OnClickListene
                 break;
             case R.id.tv_change_account:
                 Constants.TOKEN = "";
-                LoginActivity.clearLoginData();
                 MainActivity.actionStart(mContext, MainActivity.TYPE_RELOGIN);
                 finish();
                 break;
