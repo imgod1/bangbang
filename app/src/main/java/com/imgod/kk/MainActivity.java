@@ -251,8 +251,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 tv_action_1.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        ToastUtils.showToastShort(mContext, "选择凭证");
-                        choosePhotoWithPermissionCheck();
+                        ToastUtils.showToastShort(mContext, "该功能还在开发中");
+//                        ToastUtils.showToastShort(mContext, "选择凭证");
+//                        choosePhotoWithPermissionCheck();
                     }
                 });
 
@@ -550,10 +551,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 break;
             case R.id.rview_amount:
                 showSelectAmountDialog();
-                break;
-            case R.id.tv_action_1:
-                break;
-            case R.id.tv_action_2:
                 break;
             case R.id.tv_get_mobile_number:
                 if (rush_model == RUSH_MODEL_RUSH) {
