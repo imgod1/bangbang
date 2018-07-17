@@ -10,6 +10,9 @@ package com.imgod.kk;
  * @used {@link }
  */
 public interface API {
+    String REPORT_SUCCESS_CHECK_USER_STATUS = "http://bang.1hengchang.com/bang-front/userAccount/queryUserDepositStatus";
+    String REPORT_SUCCESS_API = "http://bang.1hengchang.com/bang-front/topuporder/confirmOrderSuccess";
     String REPORT_FAILED_API = "http://bang.1hengchang.com/bang-front/topuporder/confirmOrderFailure";
     String GET_TASK_URL = "http://bang.1hengchang.com/bang-front/topuporder/fetchorder?check=on&check=on&check=on&check=on&check=on&check=on";
+
 }

@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -27,12 +29,14 @@ import android.widget.TextView;
 import com.imgod.kk.app.Constants;
 import com.imgod.kk.response_model.BaseResponse;
 import com.imgod.kk.response_model.GetTaskResponse;
+import com.imgod.kk.utils.BitmapUtils;
 import com.imgod.kk.utils.DateUtils;
 import com.imgod.kk.utils.GsonUtil;
 import com.imgod.kk.utils.LogUtils;
 import com.imgod.kk.utils.MediaPlayUtils;
 import com.imgod.kk.utils.SPUtils;
 import com.imgod.kk.utils.ScreenUtils;
+import com.imgod.kk.utils.StringUtils;
 import com.imgod.kk.utils.ToastUtils;
 import com.imgod.kk.views.RowView;
 import com.zhy.adapter.recyclerview.CommonAdapter;
@@ -47,7 +51,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import okhttp3.Call;
@@ -164,37 +172,79 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
      * 解析网络请求得到的数据
      */
     private void parseOrderSizeResponse(String content) {
+        if (!parseListOrderFromesponse(content)) {//如果当前没有历史订单的话 再去执行抢单的逻辑
+            Document document = null;
+            try {
+                document = Jsoup.parse(content);
+                Elements elements = document.getElementsByClass("oder-item");
+                Element element = elements.select("ul").first();
+                Elements liElements = element.select("li");
+                for (int i = 0; i < liElements.size(); i++) {
+                    Element tempElement = liElements.get(i);
+                    String techphoneChargeName = tempElement.attr("data-parval");
+                    LogUtils.e(TAG, "parseOrderSizeResponse:techphoneChargeName: " + techphoneChargeName);
+                    LogUtils.e(TAG, "parseOrderSizeResponse: mRequestAmount:" + mRequestAmount);
+                    if (techphoneChargeName.trim().equals("" + mRequestAmount)) {
+                        int orderNum = getTelephoneChargeOrderNum(tempElement.text());
+                        LogUtils.e(TAG, techphoneChargeName);
+                        LogUtils.e(TAG, "数量:" + orderNum);
+
+                        if (orderNum > 0) {
+                            //如果该选项还有剩余订单的话,那这个时候应该先发起抢订单的操作
+                            LogUtils.e(TAG, techphoneChargeName + "话费单有库存,请及时去抢单");
+                            requestGetTask("" + mRequestAmount, mRequestProvince, "1");
+                        } else {
+                            //如果没有数量 那就应该执行刷新操作了
+                            requestPlatformOrderSize();
+                        }
+                        break;
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    /**
+     * 解析网络请求得到的数据 得到现在已经存在的订单
+     */
+    private boolean parseListOrderFromesponse(String content) {
         Document document = null;
         try {
             document = Jsoup.parse(content);
-            Elements elements = document.getElementsByClass("oder-item");
-            Element element = elements.select("ul").first();
-            Elements liElements = element.select("li");
-            for (int i = 0; i < liElements.size(); i++) {
-                Element tempElement = liElements.get(i);
-                String techphoneChargeName = tempElement.attr("data-parval");
-                LogUtils.e(TAG, "parseOrderSizeResponse:techphoneChargeName: " + techphoneChargeName);
-                LogUtils.e(TAG, "parseOrderSizeResponse: mRequestAmount:" + mRequestAmount);
-                if (techphoneChargeName.trim().equals("" + mRequestAmount)) {
-                    int orderNum = getTelephoneChargeOrderNum(tempElement.text());
-                    LogUtils.e(TAG, techphoneChargeName);
-                    LogUtils.e(TAG, "数量:" + orderNum);
+            Element element = document.getElementById("sendOrderListPanel");
+            Elements trElements = element.select("tr");
+            if (null != trElements && trElements.size() > 0) {//大于0说明有历史订单
+                Element tempElement = trElements.get(0);
 
-                    if (orderNum > 0) {
-                        //如果该选项还有剩余订单的话,那这个时候应该先发起抢订单的操作
-                        LogUtils.e(TAG, techphoneChargeName + "话费单有库存,请及时去抢单");
-                        requestGetTask("" + mRequestAmount, mRequestProvince, "1");
-                    } else {
-                        //如果没有数量 那就应该执行刷新操作了
-                        requestPlatformOrderSize();
-                    }
-                    break;
+                orderDataBean = new GetTaskResponse.DataBean();
+
+                String id = tempElement.attr("data-orderseq");
+                String amount = tempElement.attr("data-parval");
+                String mobile = tempElement.attr("data-mobile");
+                String provinceName = tempElement.attr("data-provincename");
+                String endTime = null;
+                Elements endTimeElements = tempElement.getElementsByClass("endTime");
+                if (null != endTimeElements && endTimeElements.size() > 0) {
+                    endTime = endTimeElements.get(0).text();
                 }
+                orderDataBean.setId(id);
+                orderDataBean.setAmount(Double.parseDouble(amount));
+                orderDataBean.setMobile(mobile);
+                orderDataBean.setProvinceName(provinceName);
+                orderDataBean.setExpireTime(endTime);
+                setItemViewByModel();
+                return true;
             }
+
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return false;
     }
 
 
@@ -233,36 +283,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             List<GetTaskResponse.DataBean> orderList = getTaskResponse.getData();
             if (null != orderList && orderList.size() > 0) {
                 orderDataBean = orderList.get(0);
-
-                rush_model = RUSH_MODEL_NOT_RUSH;
-                setBottomViewStatus();
-                item_order.setVisibility(View.VISIBLE);
-
-
-                tv_phone_number.setText(orderDataBean.getMobile());
-                tv_province.setText(orderDataBean.getProvinceName());
-                tv_amount.setText("" + orderDataBean.getParval());
-                tv_id.setText("订单号:" + orderDataBean.getId());
-                if (!TextUtils.isEmpty(orderDataBean.getExpireTime())) {
-                    tv_date.setText(DateUtils.reFormat(orderDataBean.getExpireTime(), DateUtils.FORMAT_DATE_TIME_ALL_NUMBER, DateUtils.FORMAT_DATE_TIME));
-                }
-                tv_action_1.setText("我已充值");
-                tv_action_2.setText("我没充值");
-                tv_action_1.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        ToastUtils.showToastShort(mContext, "该功能还在开发中");
-//                        ToastUtils.showToastShort(mContext, "选择凭证");
-//                        choosePhotoWithPermissionCheck();
-                    }
-                });
-
-                tv_action_2.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        requestReportTaskFailed(orderDataBean.getId());
-                    }
-                });
+                setItemViewByModel();
                 showGetOrderSuccessDialog();
             }
 
@@ -274,6 +295,42 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             }
         }
     }
+
+    //通过model设置item的view
+    private void setItemViewByModel() {
+        rush_model = RUSH_MODEL_NOT_RUSH;
+        setBottomViewStatus();
+        item_order.setVisibility(View.VISIBLE);
+
+        tv_phone_number.setText(orderDataBean.getMobile());
+        tv_province.setText(orderDataBean.getProvinceName());
+        tv_amount.setText("" + orderDataBean.getParval());
+        tv_id.setText("订单号:" + orderDataBean.getId());
+        if (!TextUtils.isEmpty(orderDataBean.getExpireTime())) {
+            if (orderDataBean.getExpireTime().contains("-") || orderDataBean.getExpireTime().contains(":")) {
+                tv_date.setText("截止时间:" + orderDataBean.getExpireTime());
+            } else {
+                tv_date.setText("截止时间:" + DateUtils.reFormat(orderDataBean.getExpireTime(), DateUtils.FORMAT_DATE_TIME_ALL_NUMBER, DateUtils.FORMAT_DATE_TIME));
+            }
+        }
+        tv_action_1.setText("我已充值");
+        tv_action_2.setText("我没充值");
+        tv_action_1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                ToastUtils.showToastShort(mContext, "选择凭证");
+                choosePhotoWithPermissionCheck();
+            }
+        });
+
+        tv_action_2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                requestReportTaskFailed(orderDataBean.getId());
+            }
+        });
+    }
+
 
     private AlertDialog getOrderSuccessDialog;
 
@@ -340,9 +397,67 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         switch (item.getItemId()) {
             case R.id.action_setting:
                 SettingActivity.actionStart(mContext);
+//                choosePhotoWithPermissionCheck();
                 break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+
+    private RequestCall requestReportTaskSuccessFirstCheckUserStatusCall;
+
+    //上报充值结果成功前的校验身份
+    public void requestReportTaskSuccessFirstCheckUserStatus() {
+        requestReportTaskSuccessFirstCheckUserStatusCall = OkHttpUtils.post().url(API.REPORT_SUCCESS_CHECK_USER_STATUS)
+                .build();
+        requestReportTaskSuccessFirstCheckUserStatusCall.execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                ToastUtils.showToastShort(mContext, e.getMessage());
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                BaseResponse baseResponse = GsonUtil.GsonToBean(response, BaseResponse.class);
+                if (Constants.REQUEST_STATUS.SUCCESS.equals(baseResponse.getStatus())) {
+                    //如果用户校验结果成功的话 那才去执行真正报单的逻辑
+                    requestReportTaskSuccess(orderDataBean.getId(), mFileName, mFile);
+                } else {
+                    ToastUtils.showToastShort(mContext, baseResponse.getMsg());
+                }
+            }
+        });
+    }
+
+
+    private RequestCall requestReportTaskSuccessCall;
+
+    //上报充值结果成功前的校验身份
+    public void requestReportTaskSuccess(String id, String fileName, File file) {
+        HashMap<String, String> hashMap = new HashMap<>();
+        hashMap.put("orderSeq", id);
+        hashMap.put("submitStatus", "00");
+        requestReportTaskSuccessCall = OkHttpUtils.post().url(API.REPORT_SUCCESS_API)
+                .addFile("file", fileName, file)
+                .params(hashMap)
+                .build();
+        requestReportTaskSuccessCall.execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                ToastUtils.showToastShort(mContext, e.getMessage());
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                BaseResponse baseResponse = GsonUtil.GsonToBean(response, BaseResponse.class);
+                if (Constants.REQUEST_STATUS.SUCCESS.equals(baseResponse.getStatus())) {
+                    item_order.setVisibility(View.GONE);
+                    ToastUtils.showToastShort(mContext, "报单成功");
+                } else {
+                    ToastUtils.showToastShort(mContext, baseResponse.getMsg());
+                }
+            }
+        });
     }
 
 
@@ -414,21 +529,24 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     private static final int REQUEST_CODE_PICK_IMAGE = 0x00;
 
+    private String mFileName;
+    private File mFile;
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_PICK_IMAGE) {
-            if (resultCode == RESULT_OK) {
+            if (resultCode == RESULT_OK && null != data) {
                 Uri uri = data.getData();
-                LogUtils.e(TAG, "onActivityResult: " + uri.getEncodedPath());
                 try {
-//                    Bitmap bit = BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));
-//                    String voucher = BitmapUtils.bitmapToBase64WithTitle(bit, 40);
-//                    LogUtils.e(TAG, "onActivityResult: " + voucher);
-//                    requestReportTask(orderDataBean.getId(), orderDataBean.getMobile(), Constants.RECHARGE_TYPE.SUCCESS, voucher);
-                } catch (Exception e) {
+                    Bitmap bit = BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));
+                    mFile = new File(mContext.getCacheDir(), DateUtils.getFormatDateTimeFrom(new Date()) + ".jpg");
+                    BitmapUtils.compressBitmapToFile(bit, mFile, 20);
+                    mFileName = StringUtils.getFileNameFromPath(mFile.getAbsolutePath());
+                    requestReportTaskSuccessFirstCheckUserStatus();
+                } catch (FileNotFoundException e) {
+                    ToastUtils.showToastShort(mContext, "压缩图片时发生异常");
                     e.printStackTrace();
-                    ToastUtils.showToastShort(mContext, "图片不存在");
                 }
             } else {
                 ToastUtils.showToastShort(mContext, "取消选择图片");
