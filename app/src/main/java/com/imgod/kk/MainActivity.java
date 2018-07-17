@@ -95,6 +95,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         tv_action_1.setOnClickListener(this);
         tv_action_2.setOnClickListener(this);
         tv_get_mobile_number.setOnClickListener(this);
+
+        //获取一下历史数据
+        requestPlatformOrderSize(GET_ORDER_SIZE_TYPE_GET_HISTROY_ORDER);
     }
 
     Toolbar toolbar;
@@ -145,11 +148,20 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
 
     private void requestPlatformOrderSize() {
-        if (rush_model == RUSH_MODEL_RUSH) {
+        requestPlatformOrderSize(GET_ORDER_SIZE_TYPE_REFRESH);
+    }
+
+    public static int GET_ORDER_SIZE_TYPE_REFRESH = 0x00;//刷新用于获取订单
+    public static int GET_ORDER_SIZE_TYPE_GET_HISTROY_ORDER = 0x00;//用于获取历史订单
+    private int get_order_size_type;
+
+    private void requestPlatformOrderSize(int type) {
+        get_order_size_type = type;
+        if (rush_model == RUSH_MODEL_RUSH || type == GET_ORDER_SIZE_TYPE_GET_HISTROY_ORDER) {
             toolbar.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    requestPlatformOrderSizeCall = OkHttpUtils.get().url(ORDER_LIST_URL).build();
+                    requestPlatformOrderSizeCall = OkHttpUtils.get().url(ORDER_LIST_URL).tag(this).build();
                     requestPlatformOrderSizeCall.execute(new StringCallback() {
                         @Override
                         public void onError(Call call, Exception e, int id) {
@@ -160,7 +172,11 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
                         @Override
                         public void onResponse(String response, int id) {//
-                            parseOrderSizeResponse(response);
+                            if (get_order_size_type == GET_ORDER_SIZE_TYPE_GET_HISTROY_ORDER) {
+                                parseListOrderFromesponse(response);
+                            } else {
+                                parseOrderSizeResponse(response);
+                            }
                         }
                     });
                 }

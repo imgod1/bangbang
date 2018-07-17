@@ -100,7 +100,7 @@ public class BangBangApplication extends Application {
                         return chain.proceed(request);
                     }
                 })
-                .addInterceptor(new LoggerInterceptor("mifeng"))
+                .addInterceptor(new LoggerInterceptor("bangbang"))
                 .build();
         OkHttpUtils.initClient(okHttpClient);
     }
