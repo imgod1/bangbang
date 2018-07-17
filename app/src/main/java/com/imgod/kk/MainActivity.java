@@ -259,6 +259,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
                 .addParams("appCode", "mobilefee")
                 .addParams("province", province)
                 .addParams("count", count)
+                .tag(this)
                 .build();
         requestGetTaskCall.execute(new StringCallback() {
             @Override
@@ -382,6 +383,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        OkHttpUtils.getInstance().cancelTag(this);
         MediaPlayUtils.stopPlay();
     }
 
@@ -408,7 +410,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
     //上报充值结果成功前的校验身份
     public void requestReportTaskSuccessFirstCheckUserStatus() {
-        requestReportTaskSuccessFirstCheckUserStatusCall = OkHttpUtils.post().url(API.REPORT_SUCCESS_CHECK_USER_STATUS)
+        requestReportTaskSuccessFirstCheckUserStatusCall = OkHttpUtils.post().url(API.REPORT_SUCCESS_CHECK_USER_STATUS).tag(this)
                 .build();
         requestReportTaskSuccessFirstCheckUserStatusCall.execute(new StringCallback() {
             @Override
@@ -440,6 +442,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
         requestReportTaskSuccessCall = OkHttpUtils.post().url(API.REPORT_SUCCESS_API)
                 .addFile("file", fileName, file)
                 .params(hashMap)
+                .tag(this)
                 .build();
         requestReportTaskSuccessCall.execute(new StringCallback() {
             @Override
@@ -467,6 +470,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     public void requestReportTaskFailed(String id) {
         requestReportCall = OkHttpUtils.post().url(API.REPORT_FAILED_API)
                 .addParams("orderSeq", id)
+                .tag(this)
                 .build();
         requestReportCall.execute(new StringCallback() {
             @Override
