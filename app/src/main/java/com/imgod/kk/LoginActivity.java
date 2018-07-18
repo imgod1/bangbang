@@ -254,6 +254,7 @@ public class LoginActivity extends BaseActivity {
             requestLoadImageCode();
         } else if (response.contains("图形验证码不正确")) {
             ToastUtils.showToastShort(LoginActivity.this, "图形验证码不正确!");
+            etv_img_code.getText().clear();
             requestLoadImageCode();
         } else {
             ToastUtils.showToastShort(mContext, "登录成功");
