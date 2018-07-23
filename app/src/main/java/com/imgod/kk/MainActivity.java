@@ -172,6 +172,10 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
                         @Override
                         public void onResponse(String response, int id) {//
+                            LogUtils.e(TAG, "onResponse: " + response);
+                            if (isTokenOutTime(response)) {
+                                return;
+                            }
                             if (get_order_size_type == GET_ORDER_SIZE_TYPE_GET_HISTROY_ORDER) {
                                 parseListOrderFromesponse(response);
                             } else {
@@ -188,6 +192,10 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
      * 解析网络请求得到的数据
      */
     private void parseOrderSizeResponse(String content) {
+        if (isTokenOutTime(content)) {
+            return;
+        }
+
         if (!parseListOrderFromesponse(content)) {//如果当前没有历史订单的话 再去执行抢单的逻辑
             Document document = null;
             try {
@@ -294,6 +302,10 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     GetTaskResponse.DataBean orderDataBean;//获取到的订单信息
 
     private void parseGetTaskResponse(String response) {
+        if (isTokenOutTime(response)) {
+            return;
+        }
+
         BaseResponse baseResponse = GsonUtil.GsonToBean(response, BaseResponse.class);
         if (baseResponse.getStatus().equals(Constants.REQUEST_STATUS.SUCCESS)) {
             GetTaskResponse getTaskResponse = GsonUtil.GsonToBean(response, GetTaskResponse.class);
@@ -468,6 +480,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
             @Override
             public void onResponse(String response, int id) {
+                if (isTokenOutTime(response)) {
+                    return;
+                }
                 BaseResponse baseResponse = GsonUtil.GsonToBean(response, BaseResponse.class);
                 if (Constants.REQUEST_STATUS.SUCCESS.equals(baseResponse.getStatus())) {
                     item_order.setVisibility(View.GONE);
@@ -496,6 +511,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
             @Override
             public void onResponse(String response, int id) {
+                if (isTokenOutTime(response)) {
+                    return;
+                }
                 BaseResponse baseResponse = GsonUtil.GsonToBean(response, BaseResponse.class);
                 if (Constants.REQUEST_STATUS.SUCCESS.equals(baseResponse.getStatus())) {
                     item_order.setVisibility(View.GONE);
@@ -730,6 +748,16 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             LoginActivity.actionStart(mContext);
             finish();
         }
+    }
+
+    //如果返回的结果里面含有立即登录 说明需要重新登陆了
+    private boolean isTokenOutTime(String response) {
+        if (!TextUtils.isEmpty(response) && response.contains("立即登录")) {
+            ToastUtils.showToastShort(mContext, "登录状态过期,请重新登录");
+            MainActivity.actionStart(mContext, MainActivity.TYPE_RELOGIN);
+            return true;
+        }
+        return false;
     }
 
 
