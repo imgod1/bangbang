@@ -51,4 +51,34 @@ public class LogUtils {
             }
         }
     }
+
+    /**
+     * 日志 方便隐藏
+     *
+     * @param tag 标签
+     * @param msg 内容
+     * @update imgod 修改重复输出问题 2017年10月11日 13:00:16
+     */
+    public static void d(String tag, String msg) {
+        if (BuildConfig.DEBUG || LogUtils.DEBUG) {
+            if (msg.length() > LOG_MAXLENGTH) {
+                int strLength = msg.length();
+                int start = 0;
+                int end = LOG_MAXLENGTH;
+                for (int i = 0; i < 100; i++) {
+                    //剩下的文本还是大于规定长度则继续重复截取并输出
+                    if (strLength > end) {
+                        Log.d(TAG + i, msg.substring(start, end));
+                        start = end;
+                        end = end + LOG_MAXLENGTH;
+                    } else {
+                        Log.d(TAG, msg.substring(start, strLength));
+                        break;
+                    }
+                }
+            } else {
+                Log.d(tag, msg);
+            }
+        }
+    }
 }

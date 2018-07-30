@@ -29,19 +29,22 @@ public class MediaPlayUtils {
 
         AssetFileDescriptor fileDescriptor;
         try {
-            if (null == myMediaPlayer) {
-                fileDescriptor = context.getAssets().openFd(assetsFileName);
-                myMediaPlayer = new MediaPlayer();
-                myMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-                myMediaPlayer.setDataSource(fileDescriptor.getFileDescriptor(),
-
-                        fileDescriptor.getStartOffset(),
-
-                        fileDescriptor.getLength());
-
-                myMediaPlayer.prepare();
-                myMediaPlayer.setLooping(true);
+            if (null != myMediaPlayer) {
+                myMediaPlayer.stop();
+                myMediaPlayer.release();
             }
+
+            fileDescriptor = context.getAssets().openFd(assetsFileName);
+            myMediaPlayer = new MediaPlayer();
+            myMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            myMediaPlayer.setDataSource(fileDescriptor.getFileDescriptor(),
+
+                    fileDescriptor.getStartOffset(),
+
+                    fileDescriptor.getLength());
+
+            myMediaPlayer.prepare();
+            myMediaPlayer.setLooping(true);
             myMediaPlayer.start();
         } catch (IOException e) {
             e.printStackTrace();

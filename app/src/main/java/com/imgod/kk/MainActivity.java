@@ -152,7 +152,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     }
 
     public static int GET_ORDER_SIZE_TYPE_REFRESH = 0x00;//刷新用于获取订单
-    public static int GET_ORDER_SIZE_TYPE_GET_HISTROY_ORDER = 0x00;//用于获取历史订单
+    public static int GET_ORDER_SIZE_TYPE_GET_HISTROY_ORDER = 0x01;//用于获取历史订单
     private int get_order_size_type;
 
     private void requestPlatformOrderSize(int type) {
@@ -172,7 +172,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
                         @Override
                         public void onResponse(String response, int id) {//
-                            LogUtils.e(TAG, "onResponse: " + response);
+                            LogUtils.d(TAG, "onResponse: " + response);
                             if (isTokenOutTime(response)) {
                                 return;
                             }
@@ -241,7 +241,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
             document = Jsoup.parse(content);
             Element element = document.getElementById("sendOrderListPanel");
             Elements trElements = element.select("tr");
-            if (null != trElements && trElements.size() > 0) {//大于0说明有历史订单
+            if (null != trElements && trElements.size() > 0 && !content.contains("暂无记录")) {//大于0说明有历史订单
                 Element tempElement = trElements.get(0);
 
                 orderDataBean = new GetTaskResponse.DataBean();
@@ -293,7 +293,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
 
             @Override
             public void onResponse(String response, int id) {
-                LogUtils.e(TAG, "requestGetTask onResponse: " + response);
+                LogUtils.d(TAG, "requestGetTask onResponse: " + response);
                 parseGetTaskResponse(response);
             }
         });

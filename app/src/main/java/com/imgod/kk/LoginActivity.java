@@ -238,7 +238,7 @@ public class LoginActivity extends BaseActivity {
                     @Override
                     public void onResponse(String response, int id) {
                         hideProgressDialog();
-                        LogUtils.e("onResponse", response);
+                        LogUtils.d("onResponse", response);
                         if (type == REFRESH_TYPE_GET_LOGIN_STATUS) {
                             parseLoginResponse(response);
                         } else if (type == REFRESH_TYPE_GET_COOKIE) {
