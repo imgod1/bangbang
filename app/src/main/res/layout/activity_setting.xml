@@ -21,50 +21,85 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <RelativeLayout
+
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <RelativeLayout
-            android:id="@+id/rlayout_music"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="@dimen/row_height"
-            android:paddingLeft="@dimen/space_margin"
-            android:paddingRight="@dimen/space_margin">
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:text="抢到单后声音提示"/>
+            <RelativeLayout
+                android:id="@+id/rlayout_music"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/row_height"
+                android:paddingLeft="@dimen/space_margin"
+                android:paddingRight="@dimen/space_margin">
 
-            <CheckBox
-                android:id="@+id/cbox_music"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_alignParentRight="true"
-                android:layout_centerVertical="true"
-                android:checked="true"/>
-        </RelativeLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="抢到单后声音提示"/>
 
-        <include
-            layout="@layout/line_horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_below="@+id/rlayout_music"/>
+                <CheckBox
+                    android:id="@+id/cbox_music"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"/>
+            </RelativeLayout>
 
-        <TextView
-            android:id="@+id/tv_change_account"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/row_height"
-            android:layout_alignParentBottom="true"
-            android:background="@color/colorPrimary"
-            android:gravity="center"
-            android:text="切换账号"
-            android:textColor="@color/white"
-            android:textSize="16dp"/>
-    </RelativeLayout>
+            <include
+                layout="@layout/line_horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_below="@+id/rlayout_music"/>
 
+            <RelativeLayout
+                android:id="@+id/rlayout_vibrator"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/row_height"
+                android:paddingLeft="@dimen/space_margin"
+                android:paddingRight="@dimen/space_margin">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="抢到单后震动提示"/>
+
+                <CheckBox
+                    android:id="@+id/cbox_vibrator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"/>
+            </RelativeLayout>
+
+            <include
+                layout="@layout/line_horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_below="@+id/rlayout_music"/>
+        </LinearLayout>
+    </ScrollView>
+
+
+    <TextView
+        android:id="@+id/tv_change_account"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/row_height"
+        android:layout_alignParentBottom="true"
+        android:background="@color/colorPrimary"
+        android:gravity="center"
+        android:text="切换账号"
+        android:textColor="@color/white"
+        android:textSize="16dp"/>
 
 </LinearLayout>

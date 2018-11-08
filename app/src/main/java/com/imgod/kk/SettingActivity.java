@@ -29,9 +29,11 @@ public class SettingActivity extends BaseActivity implements View.OnClickListene
     }
 
     public static final String SP_MUSIC = "music";
+    public static final String SP_VIBRATOR = "vibrator";
 
     private void initEvent() {
         rlayout_music.setOnClickListener(this);
+        rlayout_vibrator.setOnClickListener(this);
         tv_change_account.setOnClickListener(this);
         cbox_music.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -39,10 +41,18 @@ public class SettingActivity extends BaseActivity implements View.OnClickListene
                 SPUtils.getInstance().put(SP_MUSIC, isChecked);
             }
         });
+        cbox_vibrator.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SPUtils.getInstance().put(SP_VIBRATOR, isChecked);
+            }
+        });
     }
 
     private RelativeLayout rlayout_music;
     private CheckBox cbox_music;
+    private RelativeLayout rlayout_vibrator;
+    private CheckBox cbox_vibrator;
     private TextView tv_change_account;
     Toolbar toolbar;
 
@@ -52,9 +62,12 @@ public class SettingActivity extends BaseActivity implements View.OnClickListene
         setSupportActionBar(toolbar);
         rlayout_music = findViewById(R.id.rlayout_music);
         cbox_music = findViewById(R.id.cbox_music);
+        rlayout_vibrator = findViewById(R.id.rlayout_vibrator);
+        cbox_vibrator = findViewById(R.id.cbox_vibrator);
         tv_change_account = findViewById(R.id.tv_change_account);
 
         cbox_music.setChecked(SPUtils.getInstance().getBoolean(SettingActivity.SP_MUSIC, true));
+        cbox_vibrator.setChecked(SPUtils.getInstance().getBoolean(SettingActivity.SP_VIBRATOR, true));
     }
 
     @Override
@@ -62,6 +75,9 @@ public class SettingActivity extends BaseActivity implements View.OnClickListene
         switch (v.getId()) {
             case R.id.rlayout_music:
                 cbox_music.setChecked(!cbox_music.isChecked());
+                break;
+            case R.id.rlayout_vibrator:
+                cbox_vibrator.setChecked(!cbox_vibrator.isChecked());
                 break;
             case R.id.tv_change_account:
                 Constants.TOKEN = "";
