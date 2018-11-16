@@ -463,6 +463,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.action_about:
+                AboutActivity.actionStart(MainActivity.this);
+                break;
             case R.id.action_setting:
                 SettingActivity.actionStart(mContext);
 //                choosePhotoWithPermissionCheck();
