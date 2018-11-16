@@ -18,7 +18,8 @@ public class VibratorUtils {
 
     //震动1秒
     public static void startVibrator(Context context) {
-        startVibrator(context, 1000);
+        long[] patter = {1000, 500, 1000, 500};
+        startVibrator(context, patter);
     }
 
     //震动指定时间
@@ -32,7 +33,7 @@ public class VibratorUtils {
         if (null == vibrator) {
             vibrator = (Vibrator) context.getApplicationContext().getSystemService(context.VIBRATOR_SERVICE);
         }
-        vibrator.vibrate(patter, 0);//0 代表重复 1代表不重复
+        vibrator.vibrate(patter, 0);//0 代表重复 -1代表不重复
     }
 
     public static void stopVibrator() {

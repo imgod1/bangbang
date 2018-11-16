@@ -25,7 +25,7 @@ public class MediaPlayUtils {
         int mVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC); // 获取当前音乐音量
         int maxVolume = mAudioManager
                 .getStreamMaxVolume(AudioManager.STREAM_MUSIC);// 获取最大声音
-        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0); // 设置为最大声音，可通过SeekBar更改音量大小
+        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, mVolume, 0); // 设置为最大声音，可通过SeekBar更改音量大小
 
         AssetFileDescriptor fileDescriptor;
         try {
